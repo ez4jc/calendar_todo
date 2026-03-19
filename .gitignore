@@ -1,0 +1,24 @@
+# Build artifacts
+*.o
+*.so
+*.a
+*.la
+*.lo
+
+# Qt generated
+moc_*.cpp
+qrc_*.cpp
+Makefile*
+.pro.user*
+*.autosave
+
+# Executables
+calendar_todo
+
+# Qt Creator
+*.creator
+*.files
+*.includes
+
+# OS files
+.DS_Store
