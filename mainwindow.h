@@ -4,17 +4,35 @@
 #include <QMainWindow>
 #include <QDate>
 #include <QSlider>
+#include <QSizeGrip>
 #include "calendarview.h"
 #include "systemtraymanager.h"
 
 class QLabel;
+class QEvent;
+class QMoveEvent;
 class QPushButton;
+class QResizeEvent;
+class QShowEvent;
 class QHBoxLayout;
+class QWidget;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
 
 public:
+    enum ResizeRegion {
+        ResizeNone,
+        ResizeLeft,
+        ResizeRight,
+        ResizeTop,
+        ResizeBottom,
+        ResizeTopLeft,
+        ResizeTopRight,
+        ResizeBottomLeft,
+        ResizeBottomRight
+    };
+
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
@@ -23,9 +41,13 @@ public:
 
 protected:
     void closeEvent(QCloseEvent *event) override;
+    bool eventFilter(QObject *watched, QEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
+    void moveEvent(QMoveEvent *event) override;
+    void resizeEvent(QResizeEvent *event) override;
+    void showEvent(QShowEvent *event) override;
 
 private slots:
     void onPrevMonth();
@@ -37,11 +59,19 @@ private slots:
     void onTrayQuitRequested();
 
 private:
+    void applyDefaultGeometry();
+    void applyWindowStyle();
+    ResizeRegion hitTestResizeRegion(const QPoint &pos) const;
+    void updateCursorForRegion(ResizeRegion region);
+    void resizeFromGlobalPos(const QPoint &globalPos);
+    void lowerToDesktopLayer();
     void setupUI();
     void updateMonthTitle();
     void updateOpacityLabel();
 
     CalendarView *m_calendarView;
+    QWidget *m_rootWidget;
+    QWidget *m_titleBar;
     QLabel *m_monthTitle;
     QPushButton *m_prevButton;
     QPushButton *m_nextButton;
@@ -49,11 +79,17 @@ private:
     QPushButton *m_closeButton;
     QSlider *m_opacitySlider;
     QLabel *m_opacityLabel;
+    QSizeGrip *m_sizeGrip;
 
     SystemTrayManager *m_trayManager;
 
     bool m_isDragging;
+    bool m_isResizing;
+    bool m_hasSavedGeometry;
     QPoint m_dragPosition;
+    QPoint m_resizeStartGlobalPos;
+    QRect m_resizeStartGeometry;
+    ResizeRegion m_resizeRegion;
 
     qreal m_currentOpacity;
     static const qreal DEFAULT_OPACITY;

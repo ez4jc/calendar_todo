@@ -2,18 +2,32 @@
 
 #include <QLabel>
 #include <QVBoxLayout>
+#include <QEasingCurve>
 #include <QDebug>
 #include "todomanager.h"
 
 CalendarView::CalendarView(QWidget *parent)
     : QWidget(parent)
     , m_gridLayout(nullptr)
+    , m_opacityEffect(nullptr)
+    , m_transitionAnimation(nullptr)
     , m_year(QDate::currentDate().year())
     , m_month(QDate::currentDate().month())
+    , m_targetYear(m_year)
+    , m_targetMonth(m_month)
+    , m_isFadingOut(false)
 {
     m_gridLayout = new QGridLayout(this);
     m_gridLayout->setContentsMargins(5, 5, 5, 5);
     m_gridLayout->setSpacing(2);
+
+    m_opacityEffect = new QGraphicsOpacityEffect(this);
+    m_opacityEffect->setOpacity(1.0);
+    setGraphicsEffect(m_opacityEffect);
+
+    m_transitionAnimation = new QPropertyAnimation(m_opacityEffect, "opacity", this);
+    connect(m_transitionAnimation, &QPropertyAnimation::finished,
+            this, &CalendarView::onTransitionFinished);
 
     setupWeekdayHeaders();
     updateCalendarGrid();
@@ -53,10 +67,34 @@ void CalendarView::updateCalendarGrid() {
         }
     }
 
-    setCurrentMonth(m_year, m_month);
+    setCurrentMonth(m_year, m_month, false);
 }
 
-void CalendarView::setCurrentMonth(int year, int month) {
+void CalendarView::setCurrentMonth(int year, int month, bool animated) {
+    if (animated && year == m_year && month == m_month && !m_isFadingOut) {
+        return;
+    }
+
+    if (!animated || !isVisible()) {
+        m_transitionAnimation->stop();
+        m_opacityEffect->setOpacity(1.0);
+        applyMonth(year, month);
+        return;
+    }
+
+    m_targetYear = year;
+    m_targetMonth = month;
+    m_isFadingOut = true;
+
+    m_transitionAnimation->stop();
+    m_transitionAnimation->setDuration(140);
+    m_transitionAnimation->setStartValue(m_opacityEffect->opacity());
+    m_transitionAnimation->setEndValue(0.15);
+    m_transitionAnimation->setEasingCurve(QEasingCurve::InOutCubic);
+    m_transitionAnimation->start();
+}
+
+void CalendarView::applyMonth(int year, int month) {
     m_year = year;
     m_month = month;
 
@@ -99,11 +137,24 @@ void CalendarView::setCurrentMonth(int year, int month) {
 }
 
 void CalendarView::refreshCells() {
-    setCurrentMonth(m_year, m_month);
+    setCurrentMonth(m_year, m_month, false);
 }
 
 void CalendarView::onCellDoubleClicked(const QDate &date) {
     if (date.isValid()) {
         emit dateDoubleClicked(date);
+    }
+}
+
+void CalendarView::onTransitionFinished() {
+    if (m_isFadingOut) {
+        applyMonth(m_targetYear, m_targetMonth);
+        m_isFadingOut = false;
+
+        m_transitionAnimation->setDuration(180);
+        m_transitionAnimation->setStartValue(m_opacityEffect->opacity());
+        m_transitionAnimation->setEndValue(1.0);
+        m_transitionAnimation->setEasingCurve(QEasingCurve::OutCubic);
+        m_transitionAnimation->start();
     }
 }

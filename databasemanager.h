@@ -12,7 +12,7 @@ public:
     static DatabaseManager& instance();
 
     bool initDatabase();
-    bool addTodo(const TodoItem &todo);
+    bool addTodo(TodoItem &todo);
     bool updateTodo(const TodoItem &todo);
     bool deleteTodo(int id);
     TodoItem getTodoById(int id) const;

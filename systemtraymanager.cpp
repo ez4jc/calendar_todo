@@ -71,8 +71,8 @@ void SystemTrayManager::onTrayIconActivated(QSystemTrayIcon::ActivationReason re
 void SystemTrayManager::onShowWindow() {
     if (m_mainWindow) {
         m_mainWindow->show();
-        m_mainWindow->activateWindow();
-        m_mainWindow->raise();
+        m_mainWindow->showNormal();
+        m_mainWindow->lower();
     }
     emit showRequested();
 }

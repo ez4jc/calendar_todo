@@ -2,6 +2,8 @@ QT += core gui widgets sql
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
+unix:LIBS += -lX11
+
 TARGET = calendar_todo
 TEMPLATE = app
 

@@ -208,8 +208,6 @@ void TodoDialog::updateTodoList() {
             item->setFont(font);
             item->setForeground(Qt::gray);
         }
-
-        m_todoListWidget->addItem(item);
     }
 }
 
@@ -221,17 +219,20 @@ void TodoDialog::onSave() {
     }
 
     TodoItem todo = getTodo();
-    todo.createdAt = QDateTime::currentDateTime();
+    if (!todo.createdAt.isValid()) {
+        todo.createdAt = QDateTime::currentDateTime();
+    }
 
     if (todo.id == 0) {
         if (TodoManager::instance().addTodo(todo)) {
+            m_currentTodo = todo;
+            setMode(EditMode);
             emit todoSaved(todo);
-            m_titleEdit->clear();
-            m_descriptionEdit->clear();
             updateTodoList();
         }
     } else {
         if (TodoManager::instance().updateTodo(todo)) {
+            m_currentTodo = todo;
             emit todoSaved(todo);
             accept();
         }
@@ -277,7 +278,6 @@ void TodoDialog::onItemClicked(QListWidgetItem *item) {
                 updateTodoList();
             } else if (choice == "编辑") {
                 if (editTodo(editedTodo, this)) {
-                    TodoManager::instance().updateTodo(editedTodo);
                     updateTodoList();
                 }
             } else if (choice == "删除") {

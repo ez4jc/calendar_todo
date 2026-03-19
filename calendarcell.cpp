@@ -39,6 +39,15 @@ CalendarCell::CalendarCell(QWidget *parent)
     );
 }
 
+void CalendarCell::setIsCurrentMonth(bool value) {
+    if (m_isCurrentMonth == value) {
+        return;
+    }
+
+    m_isCurrentMonth = value;
+    updateDisplay();
+}
+
 void CalendarCell::setDate(const QDate &date) {
     m_date = date;
     updateDisplay();
@@ -65,9 +74,7 @@ void CalendarCell::updateDisplay() {
         return;
     }
 
-    if (m_date.day() == 1 || m_dateLabel->text().isEmpty()) {
-        m_dateLabel->setText(QString::number(m_date.day()));
-    }
+    m_dateLabel->setText(QString::number(m_date.day()));
 
     if (m_date == QDate::currentDate()) {
         m_dateLabel->setStyleSheet("color: #4CAF50; font-weight: bold;");

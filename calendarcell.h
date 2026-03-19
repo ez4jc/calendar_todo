@@ -18,7 +18,7 @@ public:
     void addTodo(const TodoItem &todo);
     void clearTodos();
     bool isCurrentMonth() const { return m_isCurrentMonth; }
-    void setIsCurrentMonth(bool value) { m_isCurrentMonth = value; }
+    void setIsCurrentMonth(bool value);
 
 signals:
     void doubleClicked(const QDate &date);

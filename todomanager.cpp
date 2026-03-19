@@ -20,7 +20,7 @@ QList<TodoItem> TodoManager::getTodosByMonth(int year, int month) {
     return DatabaseManager::instance().getTodosByMonth(year, month);
 }
 
-bool TodoManager::addTodo(const TodoItem &todo) {
+bool TodoManager::addTodo(TodoItem &todo) {
     return DatabaseManager::instance().addTodo(todo);
 }
 

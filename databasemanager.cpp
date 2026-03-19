@@ -76,7 +76,7 @@ bool DatabaseManager::createTables() {
     return true;
 }
 
-bool DatabaseManager::addTodo(const TodoItem &todo) {
+bool DatabaseManager::addTodo(TodoItem &todo) {
     QSqlQuery query;
     query.prepare(
         "INSERT INTO todos (date, title, description, completed, created_at) "
@@ -93,6 +93,7 @@ bool DatabaseManager::addTodo(const TodoItem &todo) {
         return false;
     }
 
+    todo.id = query.lastInsertId().toInt();
     return true;
 }
 
