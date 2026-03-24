@@ -80,6 +80,9 @@ MainWindow::MainWindow(QWidget *parent)
     setWindowFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnBottomHint);
     setAttribute(Qt::WA_TranslucentBackground);
     setAttribute(Qt::WA_ShowWithoutActivating);
+#ifdef Q_OS_LINUX
+    setAttribute(Qt::WA_X11NetWmWindowTypeDesktop);
+#endif
     setMouseTracking(true);
     setMinimumSize(640, 420);
 

@@ -44,7 +44,6 @@ private:
     void addEditorRow(const TodoItem &todo = TodoItem(), bool blankRow = false);
     void clearLayout(QLayout *layout);
     QList<TodoItem> collectEditedTodos() const;
-    void ensureTrailingEmptyEditorRow();
     void finishInlineEdit(bool accepted);
     void updateDisplay();
     QString formatTodoText(const TodoItem &todo);

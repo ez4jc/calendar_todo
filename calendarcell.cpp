@@ -140,6 +140,11 @@ void CalendarCell::cancelInlineEdit() {
 }
 
 bool CalendarCell::eventFilter(QObject *watched, QEvent *event) {
+    if (m_isEditing && watched == qApp && event->type() == QEvent::ApplicationDeactivate) {
+        finishInlineEdit(true);
+        return false;
+    }
+
     if (m_isEditing && watched == qApp && event->type() == QEvent::MouseButtonPress) {
         QWidget *targetWidget = qobject_cast<QWidget*>(qApp->widgetAt(QCursor::pos()));
         if (!targetWidget || (targetWidget != this && !isAncestorOf(targetWidget))) {
@@ -186,8 +191,20 @@ void CalendarCell::addEditorRow(const TodoItem &todo, bool blankRow) {
         font.setStrikeOut(checked);
         lineEdit->setFont(font);
     });
-    connect(lineEdit, &QLineEdit::textChanged, this, [this](const QString &) {
-        ensureTrailingEmptyEditorRow();
+    connect(lineEdit, &QLineEdit::returnPressed, this, [this, lineEdit]() {
+        if (lineEdit->text().trimmed().isEmpty()) {
+            return;
+        }
+
+        const int rowIndex = m_editorEdits.indexOf(lineEdit);
+        if (rowIndex == m_editorEdits.size() - 1) {
+            addEditorRow(TodoItem(), true);
+        }
+
+        if (rowIndex + 1 < m_editorEdits.size()) {
+            m_editorEdits.at(rowIndex + 1)->setFocus();
+            m_editorEdits.at(rowIndex + 1)->selectAll();
+        }
     });
 
     QFont font = lineEdit->font();
@@ -226,16 +243,6 @@ QList<TodoItem> CalendarCell::collectEditedTodos() const {
     }
 
     return todos;
-}
-
-void CalendarCell::ensureTrailingEmptyEditorRow() {
-    if (!m_isEditing || m_editorEdits.isEmpty()) {
-        return;
-    }
-
-    if (!m_editorEdits.last()->text().trimmed().isEmpty()) {
-        addEditorRow(TodoItem(), true);
-    }
 }
 
 void CalendarCell::finishInlineEdit(bool accepted) {
