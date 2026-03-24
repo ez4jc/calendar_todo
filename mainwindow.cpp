@@ -19,6 +19,12 @@
 #include <QWidget>
 #include <QDesktopWidget>
 #include <QApplication>
+#include <QDBusConnection>
+#include <QDBusInterface>
+#include <QDBusReply>
+#include <QJsonArray>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QDebug>
 #include "databasemanager.h"
 
@@ -30,6 +36,148 @@
 
 namespace {
 #ifdef Q_OS_LINUX
+const char kShowDesktopShortcutId[] = "show-desktop";
+const int kShowDesktopShortcutType = 3;
+const char kShowDesktopSavedAccelsKey[] = "show_desktop_saved_accels";
+const char kShowDesktopManagedKey[] = "show_desktop_shortcut_managed";
+
+QStringList parseShortcutAccels(const QString &shortcutJson) {
+    const QJsonDocument document = QJsonDocument::fromJson(shortcutJson.trimmed().toUtf8());
+    if (!document.isObject()) {
+        return QStringList();
+    }
+
+    const QJsonValue accelsValue = document.object().value("Accels");
+    if (!accelsValue.isArray()) {
+        return QStringList();
+    }
+
+    QStringList accels;
+    const QJsonArray accelsArray = accelsValue.toArray();
+    for (const QJsonValue &value : accelsArray) {
+        if (value.isString()) {
+            accels.append(value.toString());
+        }
+    }
+    return accels;
+}
+
+QStringList currentShowDesktopShortcutAccels() {
+    QDBusInterface keybinding(
+        "com.deepin.daemon.Keybinding",
+        "/com/deepin/daemon/Keybinding",
+        "com.deepin.daemon.Keybinding",
+        QDBusConnection::sessionBus()
+    );
+    if (!keybinding.isValid()) {
+        return QStringList();
+    }
+
+    QDBusReply<QString> reply = keybinding.call("Query", kShowDesktopShortcutId, kShowDesktopShortcutType);
+    if (!reply.isValid()) {
+        return QStringList();
+    }
+
+    return parseShortcutAccels(reply.value());
+}
+
+QStringList loadSavedShowDesktopAccels() {
+    const QString saved = DatabaseManager::instance().getSetting(kShowDesktopSavedAccelsKey, "");
+    if (saved.isEmpty()) {
+        return QStringList();
+    }
+
+    const QJsonDocument document = QJsonDocument::fromJson(saved.toUtf8());
+    if (!document.isArray()) {
+        return QStringList();
+    }
+
+    QStringList accels;
+    const QJsonArray array = document.array();
+    for (const QJsonValue &value : array) {
+        if (value.isString()) {
+            accels.append(value.toString());
+        }
+    }
+    return accels;
+}
+
+void saveSavedShowDesktopAccels(const QStringList &accels) {
+    QJsonArray array;
+    for (const QString &accel : accels) {
+        array.append(accel);
+    }
+
+    DatabaseManager::instance().setSetting(
+        kShowDesktopSavedAccelsKey,
+        QString::fromUtf8(QJsonDocument(array).toJson(QJsonDocument::Compact))
+    );
+}
+
+bool setShowDesktopShortcutEnabled(bool enabled, const QStringList &restoreAccels = QStringList()) {
+    QDBusInterface keybinding(
+        "com.deepin.daemon.Keybinding",
+        "/com/deepin/daemon/Keybinding",
+        "com.deepin.daemon.Keybinding",
+        QDBusConnection::sessionBus()
+    );
+    if (!keybinding.isValid()) {
+        return false;
+    }
+
+    if (!enabled) {
+        QDBusReply<void> reply = keybinding.call("Disable", kShowDesktopShortcutId, kShowDesktopShortcutType);
+        return reply.isValid();
+    }
+
+    const QStringList accels = restoreAccels.isEmpty() ? (QStringList() << "<Super>D") : restoreAccels;
+    keybinding.call("ClearShortcutKeystrokes", kShowDesktopShortcutId, kShowDesktopShortcutType);
+
+    bool success = true;
+    for (const QString &accel : accels) {
+        QDBusReply<bool> reply = keybinding.call(
+            "ModifiedAccel",
+            kShowDesktopShortcutId,
+            kShowDesktopShortcutType,
+            accel,
+            true
+        );
+        success = success && reply.isValid() && reply.value();
+    }
+
+    return success;
+}
+
+bool queryShowDesktopState() {
+    QDBusInterface deepinWm(
+        "com.deepin.wm",
+        "/com/deepin/wm",
+        "com.deepin.wm",
+        QDBusConnection::sessionBus()
+    );
+    if (deepinWm.isValid()) {
+        QDBusReply<bool> reply = deepinWm.call("GetIsShowDesktop");
+        if (reply.isValid()) {
+            return reply.value();
+        }
+    }
+
+    QDBusInterface kwinProperties(
+        "org.kde.KWin",
+        "/KWin",
+        "org.freedesktop.DBus.Properties",
+        QDBusConnection::sessionBus()
+    );
+    if (kwinProperties.isValid()) {
+        QDBusReply<QVariant> reply = kwinProperties.call("Get", "org.kde.KWin", "showingDesktop");
+        if (reply.isValid()) {
+            return reply.value().toBool();
+        }
+    }
+
+    return false;
+}
+
 void sendNetWmState(Display *display, Window window, long action, Atom first, Atom second = None) {
     if (!display || !window || first == None) {
         return;
@@ -63,6 +211,7 @@ MainWindow::MainWindow(QWidget *parent)
     , m_monthTitle(nullptr)
     , m_prevButton(nullptr)
     , m_nextButton(nullptr)
+    , m_desktopPersistenceButton(nullptr)
     , m_settingsButton(nullptr)
     , m_closeButton(nullptr)
     , m_opacitySlider(nullptr)
@@ -73,6 +222,7 @@ MainWindow::MainWindow(QWidget *parent)
     , m_isDragging(false)
     , m_isResizing(false)
     , m_allowProgrammaticHide(false)
+    , m_persistOnShowDesktop(true)
     , m_hasSavedGeometry(false)
     , m_resizeRegion(ResizeNone)
     , m_currentOpacity(DEFAULT_OPACITY)
@@ -98,19 +248,9 @@ MainWindow::MainWindow(QWidget *parent)
             this, &MainWindow::onTrayQuitRequested);
 
     m_desktopEnforcerTimer = new QTimer(this);
-    m_desktopEnforcerTimer->setInterval(400);
-    connect(m_desktopEnforcerTimer, &QTimer::timeout, this, [this]() {
-        if (m_allowProgrammaticHide || !isWindow()) {
-            return;
-        }
-
-        if (!isVisible() || isMinimized()) {
-            show();
-            showNormal();
-        }
-
-        lowerToDesktopLayer();
-    });
+    m_desktopEnforcerTimer->setInterval(150);
+    connect(m_desktopEnforcerTimer, &QTimer::timeout,
+            this, &MainWindow::enforceDesktopVisibility);
     m_desktopEnforcerTimer->start();
 
     loadSettings();
@@ -118,6 +258,7 @@ MainWindow::MainWindow(QWidget *parent)
 }
 
 MainWindow::~MainWindow() {
+    restoreManagedShowDesktopShortcut();
 }
 
 void MainWindow::setupUI() {
@@ -169,6 +310,14 @@ void MainWindow::setupUI() {
     connect(m_opacitySlider, &QSlider::valueChanged, this, &MainWindow::onOpacityChanged);
     titleLayout->addWidget(m_opacitySlider);
 
+    m_desktopPersistenceButton = new QPushButton(m_titleBar);
+    m_desktopPersistenceButton->setCheckable(true);
+    m_desktopPersistenceButton->setFixedSize(74, 30);
+    m_desktopPersistenceButton->setCursor(Qt::PointingHandCursor);
+    connect(m_desktopPersistenceButton, &QPushButton::toggled,
+            this, &MainWindow::onDesktopPersistenceToggled);
+    titleLayout->addWidget(m_desktopPersistenceButton);
+
     m_settingsButton = new QPushButton("⚙", m_titleBar);
     m_settingsButton->setFixedSize(30, 30);
     m_settingsButton->setCursor(Qt::PointingHandCursor);
@@ -200,6 +349,7 @@ void MainWindow::setupUI() {
             this, &MainWindow::onDateDoubleClicked);
 
     applyWindowStyle();
+    updateDesktopPersistenceButton();
     updateMonthTitle();
     updateOpacityLabel();
 }
@@ -250,6 +400,13 @@ void MainWindow::applyWindowStyle() {
         "QPushButton:pressed { "
         "   background-color: rgba(50, 50, 60, %4); "
         "}"
+        "QPushButton:checked { "
+        "   background-color: rgba(85, 138, 106, 215); "
+        "   color: white; "
+        "}"
+        "QPushButton:checked:hover { "
+        "   background-color: rgba(102, 156, 122, 228); "
+        "}"
         "QSlider::groove:horizontal { "
         "   border: 1px solid rgba(100, 100, 100, 128); "
         "   height: 4px; "
@@ -278,6 +435,21 @@ void MainWindow::updateMonthTitle() {
 void MainWindow::updateOpacityLabel() {
     int value = static_cast<int>(m_currentOpacity * 100);
     m_opacityLabel->setText(QString("透明度: %1%").arg(value));
+}
+
+void MainWindow::updateDesktopPersistenceButton() {
+    if (!m_desktopPersistenceButton) {
+        return;
+    }
+
+    m_desktopPersistenceButton->blockSignals(true);
+    m_desktopPersistenceButton->setChecked(m_persistOnShowDesktop);
+    m_desktopPersistenceButton->setText(m_persistOnShowDesktop ? "常驻" : "跟随");
+    m_desktopPersistenceButton->setToolTip(
+        m_persistOnShowDesktop
+            ? "开启后会禁用系统 Win+D，避免当前窗口被显示桌面动作隐藏"
+            : "关闭后恢复系统 Win+D，窗口会跟随显示桌面一起隐藏");
+    m_desktopPersistenceButton->blockSignals(false);
 }
 
 void MainWindow::onPrevMonth() {
@@ -310,6 +482,17 @@ void MainWindow::onDateDoubleClicked(const QDate &date) {
     m_calendarView->editDate(date);
 }
 
+void MainWindow::onDesktopPersistenceToggled(bool checked) {
+    m_persistOnShowDesktop = checked;
+    syncShowDesktopShortcutState();
+    updateDesktopPersistenceButton();
+    saveSettings();
+
+    if (m_persistOnShowDesktop) {
+        enforceDesktopVisibility();
+    }
+}
+
 void MainWindow::onOpacityChanged(int value) {
     m_currentOpacity = value / 100.0;
     applyWindowStyle();
@@ -326,13 +509,14 @@ void MainWindow::onTrayShowRequested() {
     }
     show();
     showNormal();
-    lowerToDesktopLayer();
+    enforceDesktopVisibility();
 }
 
 void MainWindow::onTrayQuitRequested() {
     if (m_desktopEnforcerTimer) {
         m_desktopEnforcerTimer->stop();
     }
+    restoreManagedShowDesktopShortcut();
     saveSettings();
     qApp->quit();
 }
@@ -348,11 +532,16 @@ void MainWindow::loadSettings() {
         updateOpacityLabel();
     }
 
+    m_persistOnShowDesktop = DatabaseManager::instance().getSetting("persist_on_show_desktop", "1") != "0";
+    syncShowDesktopShortcutState();
+    updateDesktopPersistenceButton();
     m_hasSavedGeometry = false;
 }
 
 void MainWindow::saveSettings() {
     DatabaseManager::instance().setSetting("opacity", QString::number(m_currentOpacity));
+    DatabaseManager::instance().setSetting("persist_on_show_desktop",
+                                           m_persistOnShowDesktop ? "1" : "0");
 
     QRect geo = geometry();
     QString geometryStr = QString("%1,%2,%3,%4")
@@ -364,7 +553,7 @@ void MainWindow::saveSettings() {
 }
 
 void MainWindow::changeEvent(QEvent *event) {
-    if (event->type() == QEvent::WindowStateChange && isMinimized()) {
+    if (event->type() == QEvent::WindowStateChange && isMinimized() && m_persistOnShowDesktop) {
         setWindowState(windowState() & ~Qt::WindowMinimized);
         showNormal();
         lowerToDesktopLayer();
@@ -373,6 +562,48 @@ void MainWindow::changeEvent(QEvent *event) {
     }
 
     QMainWindow::changeEvent(event);
+}
+
+void MainWindow::syncShowDesktopShortcutState() {
+#ifdef Q_OS_LINUX
+    const bool managed = DatabaseManager::instance().getSetting(kShowDesktopManagedKey, "0") == "1";
+
+    if (m_persistOnShowDesktop) {
+        QStringList savedAccels = loadSavedShowDesktopAccels();
+        if (savedAccels.isEmpty()) {
+            savedAccels = currentShowDesktopShortcutAccels();
+        }
+        if (savedAccels.isEmpty()) {
+            savedAccels << "<Super>D";
+        }
+
+        saveSavedShowDesktopAccels(savedAccels);
+        DatabaseManager::instance().setSetting(kShowDesktopManagedKey, "1");
+        setShowDesktopShortcutEnabled(false);
+        return;
+    }
+
+    if (managed) {
+        restoreManagedShowDesktopShortcut();
+    }
+#endif
+}
+
+void MainWindow::restoreManagedShowDesktopShortcut() {
+#ifdef Q_OS_LINUX
+    const bool managed = DatabaseManager::instance().getSetting(kShowDesktopManagedKey, "0") == "1";
+    if (!managed) {
+        return;
+    }
+
+    QStringList savedAccels = loadSavedShowDesktopAccels();
+    if (savedAccels.isEmpty()) {
+        savedAccels << "<Super>D";
+    }
+
+    setShowDesktopShortcutEnabled(true, savedAccels);
+    DatabaseManager::instance().setSetting(kShowDesktopManagedKey, "0");
+#endif
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {
@@ -389,10 +620,16 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 void MainWindow::hideEvent(QHideEvent *event) {
     QMainWindow::hideEvent(event);
 
-    if (!m_allowProgrammaticHide && !qApp->closingDown()) {
-        show();
-        showNormal();
-        lowerToDesktopLayer();
+    if (m_persistOnShowDesktop && !m_allowProgrammaticHide && !qApp->closingDown()) {
+        QTimer::singleShot(0, this, [this]() {
+            if (!m_persistOnShowDesktop || m_allowProgrammaticHide || qApp->closingDown()) {
+                return;
+            }
+
+            show();
+            showNormal();
+            lowerToDesktopLayer();
+        });
     }
 }
 
@@ -524,7 +761,26 @@ void MainWindow::resizeEvent(QResizeEvent *event) {
 
 void MainWindow::showEvent(QShowEvent *event) {
     QMainWindow::showEvent(event);
-    lowerToDesktopLayer();
+    if (m_persistOnShowDesktop) {
+        lowerToDesktopLayer();
+    }
+}
+
+void MainWindow::enforceDesktopVisibility() {
+    if (m_allowProgrammaticHide || !isWindow()) {
+        return;
+    }
+
+    const bool showingDesktop = queryShowDesktopState();
+
+    if (m_persistOnShowDesktop && (showingDesktop || !isVisible() || isMinimized())) {
+        show();
+        showNormal();
+    }
+
+    if (isVisible()) {
+        lowerToDesktopLayer();
+    }
 }
 
 MainWindow::ResizeRegion MainWindow::hitTestResizeRegion(const QPoint &pos) const {

@@ -57,6 +57,7 @@ private slots:
     void onPrevMonth();
     void onNextMonth();
     void onDateDoubleClicked(const QDate &date);
+    void onDesktopPersistenceToggled(bool checked);
     void onOpacityChanged(int value);
     void onShowSettings();
     void onTrayShowRequested();
@@ -64,13 +65,17 @@ private slots:
 
 private:
     void applyDefaultGeometry();
+    void enforceDesktopVisibility();
     void applyWindowStyle();
     void markGeometryCustomized();
+    void restoreManagedShowDesktopShortcut();
     ResizeRegion hitTestResizeRegion(const QPoint &pos) const;
+    void syncShowDesktopShortcutState();
     void updateCursorForRegion(ResizeRegion region);
     void resizeFromGlobalPos(const QPoint &globalPos);
     void lowerToDesktopLayer();
     void setupUI();
+    void updateDesktopPersistenceButton();
     void updateMonthTitle();
     void updateOpacityLabel();
 
@@ -80,6 +85,7 @@ private:
     QLabel *m_monthTitle;
     QPushButton *m_prevButton;
     QPushButton *m_nextButton;
+    QPushButton *m_desktopPersistenceButton;
     QPushButton *m_settingsButton;
     QPushButton *m_closeButton;
     QSlider *m_opacitySlider;
@@ -92,6 +98,7 @@ private:
     bool m_isDragging;
     bool m_isResizing;
     bool m_allowProgrammaticHide;
+    bool m_persistOnShowDesktop;
     bool m_hasSavedGeometry;
     QPoint m_dragPosition;
     QPoint m_resizeStartGlobalPos;

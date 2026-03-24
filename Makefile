@@ -12,10 +12,10 @@ MAKEFILE      = Makefile
 
 CC            = gcc
 CXX           = g++
-DEFINES       = -DQT_DEPRECATED_WARNINGS -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_SQL_LIB -DQT_CORE_LIB
+DEFINES       = -DQT_DEPRECATED_WARNINGS -DQT_NO_DEBUG -DQT_WIDGETS_LIB -DQT_GUI_LIB -DQT_SQL_LIB -DQT_DBUS_LIB -DQT_CORE_LIB
 CFLAGS        = -pipe -O2 -Wall -W -D_REENTRANT -fPIC $(DEFINES)
 CXXFLAGS      = -pipe -O2 -std=gnu++11 -Wall -W -D_REENTRANT -fPIC $(DEFINES)
-INCPATH       = -I. -isystem /usr/include/aarch64-linux-gnu/qt5 -isystem /usr/include/aarch64-linux-gnu/qt5/QtWidgets -isystem /usr/include/aarch64-linux-gnu/qt5/QtGui -isystem /usr/include/aarch64-linux-gnu/qt5/QtSql -isystem /usr/include/aarch64-linux-gnu/qt5/QtCore -I. -isystem /usr/include/libdrm -I/usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++
+INCPATH       = -I. -isystem /usr/include/aarch64-linux-gnu/qt5 -isystem /usr/include/aarch64-linux-gnu/qt5/QtWidgets -isystem /usr/include/aarch64-linux-gnu/qt5/QtGui -isystem /usr/include/aarch64-linux-gnu/qt5/QtSql -isystem /usr/include/aarch64-linux-gnu/qt5/QtDBus -isystem /usr/include/aarch64-linux-gnu/qt5/QtCore -I. -isystem /usr/include/libdrm -I/usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++
 QMAKE         = /usr/lib/qt5/bin/qmake
 DEL_FILE      = rm -f
 CHK_DIR_EXISTS= test -d
@@ -38,7 +38,7 @@ DISTNAME      = calendar_todo1.0.0
 DISTDIR = /data/home/ZGYD/code/calendar_todo/.tmp/calendar_todo1.0.0
 LINK          = g++
 LFLAGS        = -Wl,-O1
-LIBS          = $(SUBLIBS) -lX11 -lQt5Widgets -lQt5Gui -lQt5Sql -lQt5Core -lGL -lpthread 
+LIBS          = $(SUBLIBS) -lX11 -lQt5Widgets -lQt5Gui -lQt5Sql -lQt5DBus -lQt5Core -lGL -lpthread 
 AR            = ar cqs
 RANLIB        = 
 SED           = sed
@@ -148,6 +148,9 @@ DIST          = /usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/spec_pre.prf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/qt.prf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/resources.prf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/moc.prf \
+		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/dbuscommon.pri \
+		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/dbusinterfaces.prf \
+		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/dbusadaptors.prf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/unix/opengl.prf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/uic.prf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/unix/thread.prf \
@@ -254,6 +257,9 @@ Makefile: calendar_todo.pro /usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++/qma
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/qt.prf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/resources.prf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/moc.prf \
+		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/dbuscommon.pri \
+		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/dbusinterfaces.prf \
+		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/dbusadaptors.prf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/unix/opengl.prf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/uic.prf \
 		/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/unix/thread.prf \
@@ -268,6 +274,7 @@ Makefile: calendar_todo.pro /usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++/qma
 		/usr/lib/aarch64-linux-gnu/libQt5Widgets.prl \
 		/usr/lib/aarch64-linux-gnu/libQt5Gui.prl \
 		/usr/lib/aarch64-linux-gnu/libQt5Sql.prl \
+		/usr/lib/aarch64-linux-gnu/libQt5DBus.prl \
 		/usr/lib/aarch64-linux-gnu/libQt5Core.prl
 	$(QMAKE) -o Makefile calendar_todo.pro
 /usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/spec_pre.prf:
@@ -341,6 +348,9 @@ Makefile: calendar_todo.pro /usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++/qma
 /usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/qt.prf:
 /usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/resources.prf:
 /usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/moc.prf:
+/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/dbuscommon.pri:
+/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/dbusinterfaces.prf:
+/usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/dbusadaptors.prf:
 /usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/unix/opengl.prf:
 /usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/uic.prf:
 /usr/lib/aarch64-linux-gnu/qt5/mkspecs/features/unix/thread.prf:
@@ -355,6 +365,7 @@ resources.qrc:
 /usr/lib/aarch64-linux-gnu/libQt5Widgets.prl:
 /usr/lib/aarch64-linux-gnu/libQt5Gui.prl:
 /usr/lib/aarch64-linux-gnu/libQt5Sql.prl:
+/usr/lib/aarch64-linux-gnu/libQt5DBus.prl:
 /usr/lib/aarch64-linux-gnu/libQt5Core.prl:
 qmake: FORCE
 	@$(QMAKE) -o Makefile calendar_todo.pro
@@ -421,31 +432,31 @@ moc_mainwindow.cpp: calendarview.h \
 		mainwindow.h \
 		moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /data/home/ZGYD/code/calendar_todo/moc_predefs.h -I/usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++ -I/data/home/ZGYD/code/calendar_todo -I/usr/include/aarch64-linux-gnu/qt5 -I/usr/include/aarch64-linux-gnu/qt5/QtWidgets -I/usr/include/aarch64-linux-gnu/qt5/QtGui -I/usr/include/aarch64-linux-gnu/qt5/QtSql -I/usr/include/aarch64-linux-gnu/qt5/QtCore -I/usr/include/c++/8 -I/usr/include/aarch64-linux-gnu/c++/8 -I/usr/include/c++/8/backward -I/usr/lib/gcc/aarch64-linux-gnu/8/include -I/usr/local/include -I/usr/lib/gcc/aarch64-linux-gnu/8/include-fixed -I/usr/include/aarch64-linux-gnu -I/usr/include mainwindow.h -o moc_mainwindow.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /data/home/ZGYD/code/calendar_todo/moc_predefs.h -I/usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++ -I/data/home/ZGYD/code/calendar_todo -I/usr/include/aarch64-linux-gnu/qt5 -I/usr/include/aarch64-linux-gnu/qt5/QtWidgets -I/usr/include/aarch64-linux-gnu/qt5/QtGui -I/usr/include/aarch64-linux-gnu/qt5/QtSql -I/usr/include/aarch64-linux-gnu/qt5/QtDBus -I/usr/include/aarch64-linux-gnu/qt5/QtCore -I/usr/include/c++/8 -I/usr/include/aarch64-linux-gnu/c++/8 -I/usr/include/c++/8/backward -I/usr/lib/gcc/aarch64-linux-gnu/8/include -I/usr/local/include -I/usr/lib/gcc/aarch64-linux-gnu/8/include-fixed -I/usr/include/aarch64-linux-gnu -I/usr/include mainwindow.h -o moc_mainwindow.cpp
 
 moc_calendarview.cpp: calendarcell.h \
 		todoitem.h \
 		calendarview.h \
 		moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /data/home/ZGYD/code/calendar_todo/moc_predefs.h -I/usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++ -I/data/home/ZGYD/code/calendar_todo -I/usr/include/aarch64-linux-gnu/qt5 -I/usr/include/aarch64-linux-gnu/qt5/QtWidgets -I/usr/include/aarch64-linux-gnu/qt5/QtGui -I/usr/include/aarch64-linux-gnu/qt5/QtSql -I/usr/include/aarch64-linux-gnu/qt5/QtCore -I/usr/include/c++/8 -I/usr/include/aarch64-linux-gnu/c++/8 -I/usr/include/c++/8/backward -I/usr/lib/gcc/aarch64-linux-gnu/8/include -I/usr/local/include -I/usr/lib/gcc/aarch64-linux-gnu/8/include-fixed -I/usr/include/aarch64-linux-gnu -I/usr/include calendarview.h -o moc_calendarview.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /data/home/ZGYD/code/calendar_todo/moc_predefs.h -I/usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++ -I/data/home/ZGYD/code/calendar_todo -I/usr/include/aarch64-linux-gnu/qt5 -I/usr/include/aarch64-linux-gnu/qt5/QtWidgets -I/usr/include/aarch64-linux-gnu/qt5/QtGui -I/usr/include/aarch64-linux-gnu/qt5/QtSql -I/usr/include/aarch64-linux-gnu/qt5/QtDBus -I/usr/include/aarch64-linux-gnu/qt5/QtCore -I/usr/include/c++/8 -I/usr/include/aarch64-linux-gnu/c++/8 -I/usr/include/c++/8/backward -I/usr/lib/gcc/aarch64-linux-gnu/8/include -I/usr/local/include -I/usr/lib/gcc/aarch64-linux-gnu/8/include-fixed -I/usr/include/aarch64-linux-gnu -I/usr/include calendarview.h -o moc_calendarview.cpp
 
 moc_calendarcell.cpp: todoitem.h \
 		calendarcell.h \
 		moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /data/home/ZGYD/code/calendar_todo/moc_predefs.h -I/usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++ -I/data/home/ZGYD/code/calendar_todo -I/usr/include/aarch64-linux-gnu/qt5 -I/usr/include/aarch64-linux-gnu/qt5/QtWidgets -I/usr/include/aarch64-linux-gnu/qt5/QtGui -I/usr/include/aarch64-linux-gnu/qt5/QtSql -I/usr/include/aarch64-linux-gnu/qt5/QtCore -I/usr/include/c++/8 -I/usr/include/aarch64-linux-gnu/c++/8 -I/usr/include/c++/8/backward -I/usr/lib/gcc/aarch64-linux-gnu/8/include -I/usr/local/include -I/usr/lib/gcc/aarch64-linux-gnu/8/include-fixed -I/usr/include/aarch64-linux-gnu -I/usr/include calendarcell.h -o moc_calendarcell.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /data/home/ZGYD/code/calendar_todo/moc_predefs.h -I/usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++ -I/data/home/ZGYD/code/calendar_todo -I/usr/include/aarch64-linux-gnu/qt5 -I/usr/include/aarch64-linux-gnu/qt5/QtWidgets -I/usr/include/aarch64-linux-gnu/qt5/QtGui -I/usr/include/aarch64-linux-gnu/qt5/QtSql -I/usr/include/aarch64-linux-gnu/qt5/QtDBus -I/usr/include/aarch64-linux-gnu/qt5/QtCore -I/usr/include/c++/8 -I/usr/include/aarch64-linux-gnu/c++/8 -I/usr/include/c++/8/backward -I/usr/lib/gcc/aarch64-linux-gnu/8/include -I/usr/local/include -I/usr/lib/gcc/aarch64-linux-gnu/8/include-fixed -I/usr/include/aarch64-linux-gnu -I/usr/include calendarcell.h -o moc_calendarcell.cpp
 
 moc_tododialog.cpp: todoitem.h \
 		tododialog.h \
 		moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /data/home/ZGYD/code/calendar_todo/moc_predefs.h -I/usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++ -I/data/home/ZGYD/code/calendar_todo -I/usr/include/aarch64-linux-gnu/qt5 -I/usr/include/aarch64-linux-gnu/qt5/QtWidgets -I/usr/include/aarch64-linux-gnu/qt5/QtGui -I/usr/include/aarch64-linux-gnu/qt5/QtSql -I/usr/include/aarch64-linux-gnu/qt5/QtCore -I/usr/include/c++/8 -I/usr/include/aarch64-linux-gnu/c++/8 -I/usr/include/c++/8/backward -I/usr/lib/gcc/aarch64-linux-gnu/8/include -I/usr/local/include -I/usr/lib/gcc/aarch64-linux-gnu/8/include-fixed -I/usr/include/aarch64-linux-gnu -I/usr/include tododialog.h -o moc_tododialog.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /data/home/ZGYD/code/calendar_todo/moc_predefs.h -I/usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++ -I/data/home/ZGYD/code/calendar_todo -I/usr/include/aarch64-linux-gnu/qt5 -I/usr/include/aarch64-linux-gnu/qt5/QtWidgets -I/usr/include/aarch64-linux-gnu/qt5/QtGui -I/usr/include/aarch64-linux-gnu/qt5/QtSql -I/usr/include/aarch64-linux-gnu/qt5/QtDBus -I/usr/include/aarch64-linux-gnu/qt5/QtCore -I/usr/include/c++/8 -I/usr/include/aarch64-linux-gnu/c++/8 -I/usr/include/c++/8/backward -I/usr/lib/gcc/aarch64-linux-gnu/8/include -I/usr/local/include -I/usr/lib/gcc/aarch64-linux-gnu/8/include-fixed -I/usr/include/aarch64-linux-gnu -I/usr/include tododialog.h -o moc_tododialog.cpp
 
 moc_systemtraymanager.cpp: systemtraymanager.h \
 		moc_predefs.h \
 		/usr/lib/qt5/bin/moc
-	/usr/lib/qt5/bin/moc $(DEFINES) --include /data/home/ZGYD/code/calendar_todo/moc_predefs.h -I/usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++ -I/data/home/ZGYD/code/calendar_todo -I/usr/include/aarch64-linux-gnu/qt5 -I/usr/include/aarch64-linux-gnu/qt5/QtWidgets -I/usr/include/aarch64-linux-gnu/qt5/QtGui -I/usr/include/aarch64-linux-gnu/qt5/QtSql -I/usr/include/aarch64-linux-gnu/qt5/QtCore -I/usr/include/c++/8 -I/usr/include/aarch64-linux-gnu/c++/8 -I/usr/include/c++/8/backward -I/usr/lib/gcc/aarch64-linux-gnu/8/include -I/usr/local/include -I/usr/lib/gcc/aarch64-linux-gnu/8/include-fixed -I/usr/include/aarch64-linux-gnu -I/usr/include systemtraymanager.h -o moc_systemtraymanager.cpp
+	/usr/lib/qt5/bin/moc $(DEFINES) --include /data/home/ZGYD/code/calendar_todo/moc_predefs.h -I/usr/lib/aarch64-linux-gnu/qt5/mkspecs/linux-g++ -I/data/home/ZGYD/code/calendar_todo -I/usr/include/aarch64-linux-gnu/qt5 -I/usr/include/aarch64-linux-gnu/qt5/QtWidgets -I/usr/include/aarch64-linux-gnu/qt5/QtGui -I/usr/include/aarch64-linux-gnu/qt5/QtSql -I/usr/include/aarch64-linux-gnu/qt5/QtDBus -I/usr/include/aarch64-linux-gnu/qt5/QtCore -I/usr/include/c++/8 -I/usr/include/aarch64-linux-gnu/c++/8 -I/usr/include/c++/8/backward -I/usr/lib/gcc/aarch64-linux-gnu/8/include -I/usr/local/include -I/usr/lib/gcc/aarch64-linux-gnu/8/include-fixed -I/usr/include/aarch64-linux-gnu -I/usr/include systemtraymanager.h -o moc_systemtraymanager.cpp
 
 compiler_moc_objc_header_make_all:
 compiler_moc_objc_header_clean:
