@@ -16,6 +16,7 @@ CalendarView::CalendarView(QWidget *parent)
     , m_targetYear(m_year)
     , m_targetMonth(m_month)
     , m_isFadingOut(false)
+    , m_firstDayOfWeek(QLocale::system().firstDayOfWeek())
 {
     m_gridLayout = new QGridLayout(this);
     m_gridLayout->setContentsMargins(5, 5, 5, 5);
@@ -34,10 +35,13 @@ CalendarView::CalendarView(QWidget *parent)
 }
 
 void CalendarView::setupWeekdayHeaders() {
-    QStringList weekdaysNames = {"一", "二", "三", "四", "五", "六", "日"};
+    QStringList weekdaysNames;
+    weekdaysNames << "" << "一" << "二" << "三" << "四" << "五" << "六" << "日";
 
     for (int i = 0; i < s_daysInWeek; ++i) {
+        const int dayOfWeek = ((static_cast<int>(m_firstDayOfWeek) - 1 + i) % s_daysInWeek) + 1;
         QLabel *headerLabel = new QLabel(weekdaysNames[i], this);
+        headerLabel->setText(weekdaysNames.at(dayOfWeek));
         headerLabel->setAlignment(Qt::AlignHCenter | Qt::AlignVCenter);
         headerLabel->setStyleSheet(
             "QLabel { "
@@ -63,6 +67,10 @@ void CalendarView::updateCalendarGrid() {
             CalendarCell *cell = new CalendarCell(this);
             connect(cell, &CalendarCell::doubleClicked,
                     this, &CalendarView::onCellDoubleClicked);
+            connect(cell, &CalendarCell::todosEdited,
+                    this, &CalendarView::onCellTodosEdited);
+            connect(cell, &CalendarCell::todoCompletionChanged,
+                    this, &CalendarView::onTodoCompletionChanged);
             m_gridLayout->addWidget(cell, row, col);
         }
     }
@@ -78,6 +86,9 @@ void CalendarView::setCurrentMonth(int year, int month, bool animated) {
     if (!animated || !isVisible()) {
         m_transitionAnimation->stop();
         m_opacityEffect->setOpacity(1.0);
+        m_targetYear = year;
+        m_targetMonth = month;
+        m_isFadingOut = false;
         applyMonth(year, month);
         return;
     }
@@ -100,7 +111,7 @@ void CalendarView::applyMonth(int year, int month) {
 
     QDate firstDayOfMonth(year, month, 1);
     int firstDayWeekday = firstDayOfMonth.dayOfWeek();
-    int startOffset = (firstDayWeekday - 1) % 7;
+    int startOffset = (7 + firstDayWeekday - static_cast<int>(m_firstDayOfWeek)) % 7;
 
     QDate prevMonthDate = firstDayOfMonth.addDays(-startOffset);
 
@@ -121,12 +132,7 @@ void CalendarView::applyMonth(int year, int month) {
             if (cell) {
                 cell->setDate(currentDate);
                 cell->setIsCurrentMonth(currentDate.month() == month);
-
-                if (todosByDate.contains(currentDate)) {
-                    for (const TodoItem &todo : todosByDate[currentDate]) {
-                        cell->addTodo(todo);
-                    }
-                }
+                cell->setTodos(todosByDate.value(currentDate));
 
                 m_cells[currentDate] = cell;
             }
@@ -140,10 +146,36 @@ void CalendarView::refreshCells() {
     setCurrentMonth(m_year, m_month, false);
 }
 
+void CalendarView::editDate(const QDate &date) {
+    CalendarCell *cell = m_cells.value(date, nullptr);
+    if (cell) {
+        cell->beginInlineEdit();
+    }
+}
+
 void CalendarView::onCellDoubleClicked(const QDate &date) {
     if (date.isValid()) {
         emit dateDoubleClicked(date);
     }
+}
+
+void CalendarView::onCellTodosEdited(const QDate &date, const QList<TodoItem> &todos) {
+    if (!date.isValid()) {
+        return;
+    }
+
+    TodoManager::instance().replaceTodosByDate(date, todos);
+    refreshCells();
+}
+
+void CalendarView::onTodoCompletionChanged(int todoId, bool completed) {
+    Q_UNUSED(completed);
+    if (todoId == 0) {
+        return;
+    }
+
+    TodoManager::instance().toggleCompleted(todoId);
+    refreshCells();
 }
 
 void CalendarView::onTransitionFinished() {

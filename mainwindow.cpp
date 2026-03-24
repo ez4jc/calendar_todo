@@ -10,15 +10,16 @@
 #include <QCloseEvent>
 #include <QEvent>
 #include <QGuiApplication>
+#include <QHideEvent>
 #include <QMoveEvent>
 #include <QResizeEvent>
 #include <QShowEvent>
 #include <QStyle>
+#include <QTimer>
 #include <QWidget>
 #include <QDesktopWidget>
 #include <QApplication>
 #include <QDebug>
-#include "tododialog.h"
 #include "databasemanager.h"
 
 #ifdef Q_OS_LINUX
@@ -67,9 +68,11 @@ MainWindow::MainWindow(QWidget *parent)
     , m_opacitySlider(nullptr)
     , m_opacityLabel(nullptr)
     , m_sizeGrip(nullptr)
+    , m_desktopEnforcerTimer(nullptr)
     , m_trayManager(nullptr)
     , m_isDragging(false)
     , m_isResizing(false)
+    , m_allowProgrammaticHide(false)
     , m_hasSavedGeometry(false)
     , m_resizeRegion(ResizeNone)
     , m_currentOpacity(DEFAULT_OPACITY)
@@ -90,6 +93,22 @@ MainWindow::MainWindow(QWidget *parent)
             this, &MainWindow::onTrayShowRequested);
     connect(m_trayManager, &SystemTrayManager::quitRequested,
             this, &MainWindow::onTrayQuitRequested);
+
+    m_desktopEnforcerTimer = new QTimer(this);
+    m_desktopEnforcerTimer->setInterval(400);
+    connect(m_desktopEnforcerTimer, &QTimer::timeout, this, [this]() {
+        if (m_allowProgrammaticHide || !isWindow()) {
+            return;
+        }
+
+        if (!isVisible() || isMinimized()) {
+            show();
+            showNormal();
+        }
+
+        lowerToDesktopLayer();
+    });
+    m_desktopEnforcerTimer->start();
 
     loadSettings();
     if (!m_hasSavedGeometry) {
@@ -283,11 +302,7 @@ void MainWindow::onNextMonth() {
 }
 
 void MainWindow::onDateDoubleClicked(const QDate &date) {
-    TodoDialog dialog(date, this);
-    dialog.setModal(true);
-    dialog.exec();
-
-    m_calendarView->refreshCells();
+    m_calendarView->editDate(date);
 }
 
 void MainWindow::onOpacityChanged(int value) {
@@ -301,12 +316,18 @@ void MainWindow::onShowSettings() {
 }
 
 void MainWindow::onTrayShowRequested() {
+    if (m_desktopEnforcerTimer) {
+        m_desktopEnforcerTimer->start();
+    }
     show();
     showNormal();
     lowerToDesktopLayer();
 }
 
 void MainWindow::onTrayQuitRequested() {
+    if (m_desktopEnforcerTimer) {
+        m_desktopEnforcerTimer->stop();
+    }
     saveSettings();
     qApp->quit();
 }
@@ -350,10 +371,37 @@ void MainWindow::saveSettings() {
     DatabaseManager::instance().setSetting("geometry", geometryStr);
 }
 
+void MainWindow::changeEvent(QEvent *event) {
+    if (event->type() == QEvent::WindowStateChange && isMinimized()) {
+        setWindowState(windowState() & ~Qt::WindowMinimized);
+        showNormal();
+        lowerToDesktopLayer();
+        event->accept();
+        return;
+    }
+
+    QMainWindow::changeEvent(event);
+}
+
 void MainWindow::closeEvent(QCloseEvent *event) {
     saveSettings();
+    if (m_desktopEnforcerTimer) {
+        m_desktopEnforcerTimer->stop();
+    }
+    m_allowProgrammaticHide = true;
     hide();
+    m_allowProgrammaticHide = false;
     event->ignore();
+}
+
+void MainWindow::hideEvent(QHideEvent *event) {
+    QMainWindow::hideEvent(event);
+
+    if (!m_allowProgrammaticHide && !qApp->closingDown()) {
+        show();
+        showNormal();
+        lowerToDesktopLayer();
+    }
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
@@ -627,7 +675,14 @@ void MainWindow::lowerToDesktopLayer() {
     const Atom skipPagerAtom = XInternAtom(display, "_NET_WM_STATE_SKIP_PAGER", False);
     const Atom stickyAtom = XInternAtom(display, "_NET_WM_STATE_STICKY", False);
     const Atom desktopAtom = XInternAtom(display, "_NET_WM_DESKTOP", False);
+    const Atom windowTypeAtom = XInternAtom(display, "_NET_WM_WINDOW_TYPE", False);
+    const Atom desktopTypeAtom = XInternAtom(display, "_NET_WM_WINDOW_TYPE_DESKTOP", False);
     const unsigned long allDesktops = 0xFFFFFFFF;
+
+    if (windowTypeAtom != None && desktopTypeAtom != None) {
+        XChangeProperty(display, window, windowTypeAtom, XA_ATOM, 32, PropModeReplace,
+                        reinterpret_cast<const unsigned char*>(&desktopTypeAtom), 1);
+    }
 
     sendNetWmState(display, window, 1, belowAtom, skipTaskbarAtom);
     sendNetWmState(display, window, 1, skipPagerAtom, stickyAtom);

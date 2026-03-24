@@ -5,6 +5,7 @@
 #include <QGridLayout>
 #include <QDate>
 #include <QMap>
+#include <QLocale>
 #include <QPropertyAnimation>
 #include <QGraphicsOpacityEffect>
 #include "calendarcell.h"
@@ -17,14 +18,17 @@ public:
 
     void setCurrentMonth(int year, int month, bool animated = true);
     void refreshCells();
-    int currentYear() const { return m_year; }
-    int currentMonth() const { return m_month; }
+    void editDate(const QDate &date);
+    int currentYear() const { return m_isFadingOut ? m_targetYear : m_year; }
+    int currentMonth() const { return m_isFadingOut ? m_targetMonth : m_month; }
 
 signals:
     void dateDoubleClicked(const QDate &date);
 
 private slots:
     void onCellDoubleClicked(const QDate &date);
+    void onCellTodosEdited(const QDate &date, const QList<TodoItem> &todos);
+    void onTodoCompletionChanged(int todoId, bool completed);
     void onTransitionFinished();
 
 private:
@@ -41,6 +45,7 @@ private:
     int m_targetYear;
     int m_targetMonth;
     bool m_isFadingOut;
+    Qt::DayOfWeek m_firstDayOfWeek;
 
     static const int s_daysInWeek = 7;
     static const int s_weeksInMonth = 6;

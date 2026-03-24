@@ -10,10 +10,12 @@
 
 class QLabel;
 class QEvent;
+class QHideEvent;
 class QMoveEvent;
 class QPushButton;
 class QResizeEvent;
 class QShowEvent;
+class QTimer;
 class QHBoxLayout;
 class QWidget;
 
@@ -40,8 +42,10 @@ public:
     void saveSettings();
 
 protected:
+    void changeEvent(QEvent *event) override;
     void closeEvent(QCloseEvent *event) override;
     bool eventFilter(QObject *watched, QEvent *event) override;
+    void hideEvent(QHideEvent *event) override;
     void mousePressEvent(QMouseEvent *event) override;
     void mouseMoveEvent(QMouseEvent *event) override;
     void mouseReleaseEvent(QMouseEvent *event) override;
@@ -80,11 +84,13 @@ private:
     QSlider *m_opacitySlider;
     QLabel *m_opacityLabel;
     QSizeGrip *m_sizeGrip;
+    QTimer *m_desktopEnforcerTimer;
 
     SystemTrayManager *m_trayManager;
 
     bool m_isDragging;
     bool m_isResizing;
+    bool m_allowProgrammaticHide;
     bool m_hasSavedGeometry;
     QPoint m_dragPosition;
     QPoint m_resizeStartGlobalPos;

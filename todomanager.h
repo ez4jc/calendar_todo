@@ -15,6 +15,7 @@ public:
     bool updateTodo(const TodoItem &todo);
     bool deleteTodo(int id);
     bool toggleCompleted(int id);
+    bool replaceTodosByDate(const QDate &date, const QList<TodoItem> &todos);
 
 private:
     TodoManager();
