@@ -1,6 +1,7 @@
 #include "calendarview.h"
 
 #include <QLabel>
+#include <QTimer>
 #include <QVBoxLayout>
 #include <QEasingCurve>
 #include <QDebug>
@@ -20,7 +21,7 @@ CalendarView::CalendarView(QWidget *parent)
 {
     m_gridLayout = new QGridLayout(this);
     m_gridLayout->setContentsMargins(5, 5, 5, 5);
-    m_gridLayout->setSpacing(2);
+    m_gridLayout->setSpacing(0);
 
     m_opacityEffect = new QGraphicsOpacityEffect(this);
     m_opacityEffect->setOpacity(1.0);
@@ -165,7 +166,7 @@ void CalendarView::onCellTodosEdited(const QDate &date, const QList<TodoItem> &t
     }
 
     TodoManager::instance().replaceTodosByDate(date, todos);
-    refreshCells();
+    QTimer::singleShot(0, this, &CalendarView::refreshCells);
 }
 
 void CalendarView::onTodoCompletionChanged(int todoId, bool completed) {
@@ -175,7 +176,7 @@ void CalendarView::onTodoCompletionChanged(int todoId, bool completed) {
     }
 
     TodoManager::instance().toggleCompleted(todoId);
-    refreshCells();
+    QTimer::singleShot(0, this, &CalendarView::refreshCells);
 }
 
 void CalendarView::onTransitionFinished() {

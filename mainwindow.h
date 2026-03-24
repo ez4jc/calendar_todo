@@ -65,6 +65,7 @@ private slots:
 private:
     void applyDefaultGeometry();
     void applyWindowStyle();
+    void markGeometryCustomized();
     ResizeRegion hitTestResizeRegion(const QPoint &pos) const;
     void updateCursorForRegion(ResizeRegion region);
     void resizeFromGlobalPos(const QPoint &globalPos);

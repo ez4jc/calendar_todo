@@ -114,9 +114,7 @@ MainWindow::MainWindow(QWidget *parent)
     m_desktopEnforcerTimer->start();
 
     loadSettings();
-    if (!m_hasSavedGeometry) {
-        applyDefaultGeometry();
-    }
+    applyDefaultGeometry();
 }
 
 MainWindow::~MainWindow() {
@@ -213,11 +211,15 @@ void MainWindow::applyDefaultGeometry() {
         available = desktop->screenGeometry(this);
     }
 
-    const int width = qMax(minimumWidth(), available.width() * 3 / 5);
-    const int height = qMax(minimumHeight(), available.height() * 2 / 3);
-    const int x = available.x() + (available.width() - width) / 2;
-    const int y = available.y() + (available.height() - height) / 2;
+    const int width = qMax(minimumWidth(), available.width() * 3 / 4);
+    const int height = qMax(minimumHeight(), available.height());
+    const int x = available.right() - width + 1;
+    const int y = available.y();
     setGeometry(x, y, width, height);
+}
+
+void MainWindow::markGeometryCustomized() {
+    DatabaseManager::instance().setSetting("geometry_customized", "1");
 }
 
 void MainWindow::applyWindowStyle() {
@@ -346,20 +348,7 @@ void MainWindow::loadSettings() {
         updateOpacityLabel();
     }
 
-    QString geometryStr = DatabaseManager::instance().getSetting("geometry", "");
-    if (!geometryStr.isEmpty()) {
-        QStringList parts = geometryStr.split(",");
-        if (parts.size() == 4) {
-            int x = parts[0].toInt();
-            int y = parts[1].toInt();
-            int w = parts[2].toInt();
-            int h = parts[3].toInt();
-            if (w > 0 && h > 0) {
-                setGeometry(x, y, w, h);
-                m_hasSavedGeometry = true;
-            }
-        }
-    }
+    m_hasSavedGeometry = false;
 }
 
 void MainWindow::saveSettings() {
@@ -447,6 +436,7 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
         }
     } else if (watched == m_sizeGrip) {
         if (event->type() == QEvent::MouseButtonRelease) {
+            markGeometryCustomized();
             saveSettings();
         }
     } else if (watched == m_titleBar) {
@@ -494,6 +484,7 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
                 m_resizeRegion = ResizeNone;
                 updateCursorForRegion(hitTestResizeRegion(m_rootWidget->mapFromGlobal(mouseEvent->globalPos())));
                 m_titleBar->setCursor(Qt::OpenHandCursor);
+                markGeometryCustomized();
                 saveSettings();
                 return true;
             }
@@ -501,6 +492,7 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
             if (mouseEvent->button() == Qt::LeftButton) {
                 m_isDragging = false;
                 m_titleBar->setCursor(Qt::OpenHandCursor);
+                markGeometryCustomized();
                 saveSettings();
                 return true;
             }

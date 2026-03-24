@@ -8,11 +8,14 @@
 #include <QLineEdit>
 #include <QLayout>
 #include <QMouseEvent>
+#include <QPainter>
 #include <QPushButton>
+#include <QStyle>
 #include <QDebug>
 
 CalendarCell::CalendarCell(QWidget *parent)
     : QWidget(parent)
+    , m_isHovered(false)
     , m_isCurrentMonth(false)
     , m_isEditing(false)
     , m_layout(nullptr)
@@ -67,17 +70,6 @@ CalendarCell::CalendarCell(QWidget *parent)
     editorLayout->addWidget(m_cancelButton);
 
     m_layout->addWidget(m_editorActions);
-
-    setStyleSheet(
-        "CalendarCell { "
-        "   background-color: rgba(255, 255, 255, 0.1); "
-        "   border: 1px solid rgba(200, 200, 200, 0.2); "
-        "   border-radius: 4px; "
-        "}"
-        "CalendarCell:hover { "
-        "   background-color: rgba(255, 255, 255, 0.2); "
-        "}"
-    );
 }
 
 void CalendarCell::setIsCurrentMonth(bool value) {
@@ -186,6 +178,14 @@ void CalendarCell::addEditorRow(const TodoItem &todo, bool blankRow) {
     lineEdit->installEventFilter(this);
     rowLayout->addWidget(lineEdit);
 
+    QPushButton *deleteButton = new QPushButton(rowWidget);
+    deleteButton->setFixedSize(24, 22);
+    deleteButton->setIcon(deleteButton->style()->standardIcon(QStyle::SP_TrashIcon));
+    deleteButton->setIconSize(QSize(14, 14));
+    deleteButton->setToolTip("删除");
+    deleteButton->setFlat(true);
+    rowLayout->addWidget(deleteButton);
+
     connect(checkBox, &QCheckBox::toggled, this, [this, lineEdit](bool checked) {
         QFont font = lineEdit->font();
         font.setStrikeOut(checked);
@@ -205,6 +205,9 @@ void CalendarCell::addEditorRow(const TodoItem &todo, bool blankRow) {
             m_editorEdits.at(rowIndex + 1)->setFocus();
             m_editorEdits.at(rowIndex + 1)->selectAll();
         }
+    });
+    connect(deleteButton, &QPushButton::clicked, this, [this, rowWidget, lineEdit]() {
+        removeEditorRow(rowWidget, lineEdit);
     });
 
     QFont font = lineEdit->font();
@@ -243,6 +246,21 @@ QList<TodoItem> CalendarCell::collectEditedTodos() const {
     }
 
     return todos;
+}
+
+void CalendarCell::removeEditorRow(QWidget *rowWidget, QLineEdit *lineEdit) {
+    const int index = m_editorEdits.indexOf(lineEdit);
+    if (index >= 0) {
+        m_editorEdits.removeAt(index);
+        m_editorChecks.removeAt(index);
+    }
+
+    m_editorLayout->removeWidget(rowWidget);
+    rowWidget->deleteLater();
+
+    if (m_editorEdits.isEmpty()) {
+        addEditorRow(TodoItem(), true);
+    }
 }
 
 void CalendarCell::finishInlineEdit(bool accepted) {
@@ -336,24 +354,33 @@ void CalendarCell::mouseDoubleClickEvent(QMouseEvent *event) {
     QWidget::mouseDoubleClickEvent(event);
 }
 
+void CalendarCell::paintEvent(QPaintEvent *event) {
+    Q_UNUSED(event);
+
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing, false);
+
+    const QRect borderRect = rect().adjusted(0, 0, -1, -1);
+    const QColor backgroundColor = m_isHovered
+        ? QColor(255, 255, 255, 40)
+        : QColor(255, 255, 255, 20);
+    const QColor borderColor = m_isHovered
+        ? QColor(255, 255, 255, 255)
+        : QColor(255, 255, 255, 235);
+
+    painter.fillRect(rect(), backgroundColor);
+    painter.setPen(QPen(borderColor, 1));
+    painter.drawRect(borderRect);
+}
+
 void CalendarCell::enterEvent(QEvent *event) {
-    setStyleSheet(
-        "CalendarCell { "
-        "   background-color: rgba(255, 255, 255, 0.25); "
-        "   border: 1px solid rgba(200, 200, 200, 0.4); "
-        "   border-radius: 4px; "
-        "}"
-    );
+    m_isHovered = true;
+    update();
     QWidget::enterEvent(event);
 }
 
 void CalendarCell::leaveEvent(QEvent *event) {
-    setStyleSheet(
-        "CalendarCell { "
-        "   background-color: rgba(255, 255, 255, 0.1); "
-        "   border: 1px solid rgba(200, 200, 200, 0.2); "
-        "   border-radius: 4px; "
-        "}"
-    );
+    m_isHovered = false;
+    update();
     QWidget::leaveEvent(event);
 }

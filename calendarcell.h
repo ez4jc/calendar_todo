@@ -36,6 +36,7 @@ signals:
 
 protected:
     bool eventFilter(QObject *watched, QEvent *event) override;
+    void paintEvent(QPaintEvent *event) override;
     void mouseDoubleClickEvent(QMouseEvent *event) override;
     void enterEvent(QEvent *event) override;
     void leaveEvent(QEvent *event) override;
@@ -44,11 +45,13 @@ private:
     void addEditorRow(const TodoItem &todo = TodoItem(), bool blankRow = false);
     void clearLayout(QLayout *layout);
     QList<TodoItem> collectEditedTodos() const;
+    void removeEditorRow(QWidget *rowWidget, QLineEdit *lineEdit);
     void finishInlineEdit(bool accepted);
     void updateDisplay();
     QString formatTodoText(const TodoItem &todo);
 
     QDate m_date;
+    bool m_isHovered;
     bool m_isCurrentMonth;
     bool m_isEditing;
     QList<TodoItem> m_todos;
